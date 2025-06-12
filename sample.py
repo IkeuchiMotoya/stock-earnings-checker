@@ -77,6 +77,6 @@ df_filtered['銘柄コード'] = df_filtered['銘柄コード'].str.replace('.T'
 
 print("\n決算後に5%以上株価が変動した銘柄：")
 print(df_filtered)
-df_filtered.to_csv(r'C:\Users\pumpk\OneDrive\デスクトップ\株式\Python/filtered_results.csv', index=False, encoding='utf-8-sig')
+df_filtered.to_csv(r'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\決算反応銘柄.csv', index=False, encoding='utf-8-sig')
 
 
