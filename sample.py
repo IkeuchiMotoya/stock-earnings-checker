@@ -1,14 +1,39 @@
 import yfinance as yf
 import pandas as pd
+import csv
+import os
+import re
+
+
 from datetime import datetime, timedelta
 
-# 対象の銘柄リスト（東証銘柄は .T を付ける）
-tickers = ['135A.T']
+# # 対象の銘柄リスト（東証銘柄は .T を付ける）
+# tickers = ['135A.T']
 
-# 仮の決算日データ（実際はスクレイピング等で自動取得も可）
-earnings_dates = {
-    '135A.T': '2025-04-14'
-}
+# # 仮の決算日データ（実際はスクレイピング等で自動取得も可）
+# earnings_dates = {
+#     '135A.T': '2025-04-14'
+# }
+
+
+# 読み込むCSVファイルのパス
+import_path = r'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvインポート\決算予定_20250606.csv'
+
+# 日付部分（例: 20250606）を抽出
+filename = os.path.basename(import_path)
+match = re.search(r'_(\d{8})', filename)
+date_str = match.group(1) if match else datetime.now().strftime('%Y%m%d')  # 抽出失敗時は今日の日付
+
+
+# CSVから銘柄コードと決算日を読み込む
+tickers = []
+earnings_dates = {}
+with open(import_path, 'r', encoding='utf-8-sig') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        ticker_code = row['銘柄コード'].strip() + '.T'
+        tickers.append(ticker_code)
+        earnings_dates[ticker_code] = row['決算日']
 
 # 結果格納用
 results = []
@@ -39,7 +64,7 @@ for ticker in tickers:
         # 日付で分けて前後の株価を抽出
         pre_data = data[data.index <= edate]
         post_data = data[data.index > edate]
-        print(f"\n【{ticker}】決算日：{edate.strftime('%Y-%m-%d')}")
+        # print(f"\n【{ticker}】決算日：{edate.strftime('%Y-%m-%d')}")
         # print("▼ 決算前のデータ（pre_data）:")
         # print(pre_data)
         # print("▼ 決算前のデータ（post_data）:")
@@ -77,6 +102,5 @@ df_filtered['銘柄コード'] = df_filtered['銘柄コード'].str.replace('.T'
 
 print("\n決算後に5%以上株価が変動した銘柄：")
 print(df_filtered)
-df_filtered.to_csv(r'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\決算反応銘柄.csv', index=False, encoding='utf-8-sig')
-
-
+export_path = fr'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvエクスポート\決算反応銘柄_{date_str}.csv'
+df_filtered.to_csv(export_path, index=False, encoding='utf-8-sig')
