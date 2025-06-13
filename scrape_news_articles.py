@@ -28,6 +28,7 @@ def fetch_today_news(stock_code):
                 time_text = time_td.text.strip()
                 today_news.append({
                     '銘柄コード': stock_code,
+                    '銘柄名':"",
                     '時間': time_text,
                     'タイトル': title,
                     'URL': link
@@ -41,11 +42,17 @@ def save_to_excel(news_data, filepath):
     os.startfile(filepath)
 
 if __name__ == '__main__':
-    stock_codes = ['7203', '3350', '9984']  # ← 複数銘柄（トヨタ・ソニー・ソフトバンクなど）
+    csv_path = r'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\保有銘柄\保有銘柄.csv'
+    stock_df = pd.read_csv(csv_path, dtype=str)  # 銘柄コードが数値で落ちないようstr指定
+    stock_list = stock_df.to_dict('records')
     all_news = []
 
-    for code in stock_codes:
+    for stock in stock_list:
+        code = str(stock['銘柄コード'])
+        name = stock['銘柄名']
         news = fetch_today_news(code)
+        for n in news:
+            n['銘柄名'] = name  # 銘柄名を付加
         all_news.extend(news)
 
     if all_news:
