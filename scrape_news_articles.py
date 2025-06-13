@@ -1,9 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
+import pandas as pd
+import os
 
-def fetch_today_news_from_kabutan(stock_code):
-    # 今日の日付を "yy/mm/dd" 形式で取得
+def fetch_today_news(stock_code):
     JST = timezone(timedelta(hours=9))
     today = datetime.now(JST).strftime('%y/%m/%d')
 
@@ -23,16 +24,33 @@ def fetch_today_news_from_kabutan(stock_code):
             if a_tag:
                 title = a_tag.text.strip()
                 href = a_tag['href']
-                url = href if href.startswith('http') else 'https://kabutan.jp' + href
+                link = href if href.startswith('http') else 'https://kabutan.jp' + href
                 time_text = time_td.text.strip()
-                today_news.append({'time': time_text, 'title': title, 'url': url})
+                today_news.append({
+                    '銘柄コード': stock_code,
+                    '時間': time_text,
+                    'タイトル': title,
+                    'URL': link
+                })
 
     return today_news
 
-# 使用例
+def save_to_excel(news_data, filepath):
+    df = pd.DataFrame(news_data)
+    df.to_excel(filepath, index=False)
+    os.startfile(filepath)
+
 if __name__ == '__main__':
-    stock_code = '3350'
-    news_list = fetch_today_news_from_kabutan(stock_code)
-    print(f"【{stock_code} の今日のニュース】")
-    for news in news_list:
-        print(f"- {news['time']} | {news['title']} | {news['url']}")
+    stock_codes = ['7203', '3350', '9984']  # ← 複数銘柄（トヨタ・ソニー・ソフトバンクなど）
+    all_news = []
+
+    for code in stock_codes:
+        news = fetch_today_news(code)
+        all_news.extend(news)
+
+    if all_news:
+        output_path = r'C:\Users\pumpk\OneDrive\デスクトップ\株式\kabutan_all_news.xlsx'
+        save_to_excel(all_news, output_path)
+        print(f"{len(all_news)} 件のニュースをExcelに保存しました。")
+    else:
+        print("本日該当するニュースはありません。")
