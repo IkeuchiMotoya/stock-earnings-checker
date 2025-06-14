@@ -2,43 +2,69 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import pandas as pd
 import time
+import os
 import re
 
-# 対象の証券コード
-ticker = "9984"
-base_url = f"https://irbank.net/{ticker}"
+# CSVファイルから銘柄コードを読み込む
+csv_path = r"C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvインポート\通期業績の推移、指標の取得\検索銘柄.csv"
+ticker_df = pd.read_csv(csv_path, dtype={"銘柄コード": str})
+ticker_list = ticker_df["銘柄コード"].tolist()
+name_map = dict(zip(ticker_df["銘柄コード"], ticker_df["銘柄名"]))
 
-# Selenium ドライバー初期化
+# 抽出対象マップ（表示名: 対応キーワード）
+items = {
+    "時価総額": "時価総額",
+    "発行済み株式総数": "発行済み株式総数",
+    "配当利回り（予）": "配当利回り",
+    "PER（連）予": "PER（連）予",
+    "PBR（連）": "PBR（連）",
+    "ROE（連）予": "ROE（連）予",
+    "ROA（連）予": "ROA（連）予",
+    "EPS（連）予": "EPS（連）予"
+}
+
+# Seleniumドライバ初期化
 options = webdriver.ChromeOptions()
 options.add_argument('--headless')
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-# 通常の銘柄コードURLにアクセス
-print(f"🔍 アクセス中: {base_url}")
-driver.get(base_url)
-time.sleep(3)
+all_results = []
 
-# ページHTMLを取得
-html = driver.page_source
-soup = BeautifulSoup(html, "html.parser")
-
-# Eコードを含むリンクを検索（形式: /Exxxxx）
-e_href_tag = soup.find("a", href=re.compile(r"^/E\d+"))
-if e_href_tag:
-    e_path = e_href_tag["href"]
-    e_code = e_path.strip("/")
-
-    print(f"✅ Eコード取得成功: {e_code}")
-    full_url = f"https://irbank.net/{e_code}"
-    print(f"🌐 遷移先URL: {full_url}")
-
-    # そのページに遷移して中身を確認
-    driver.get(full_url)
+for ticker in ticker_list:
+    print(f"\n=== 処理中: {ticker} ===")
+    base_url = f"https://irbank.net/{ticker}"
+    driver.get(base_url)
     time.sleep(3)
-    title = driver.title
-    print(f"📄 ページタイトル: {title}")
-else:
-    print("❌ Eコードの取得に失敗しました")
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    e_href_tag = soup.find("a", href=re.compile(r"^/E\d+"))
+
+    if not e_href_tag:
+        print(f"❌ Eコード取得失敗: {ticker}")
+        continue
+
+    e_code = e_href_tag["href"].strip("/")
+    driver.get(f"https://irbank.net/{e_code}")
+    time.sleep(3)
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    title = soup.title.text.strip() if soup.title else ""
+
+    results = {"銘柄コード": ticker, "銘柄名": name_map.get(ticker, title)}
+    dl_elements = soup.find_all("dl")
+    for dl in dl_elements:
+        for dt, dd in zip(dl.find_all("dt"), dl.find_all("dd")):
+            key = dt.text.strip().replace(" ", "")
+            val = dd.text.strip()
+            for label, kw in items.items():
+                if key.startswith(kw):
+                    results[label] = val
+    all_results.append(results)
 
 driver.quit()
+
+# Excel出力
+df = pd.DataFrame(all_results)
+out_path = r"C:\Users\pumpk\OneDrive\デスクトップ\株式\分析\株式指標情報_保有銘柄.xlsx"
+df.to_excel(out_path, index=False)
+os.startfile(out_path)
