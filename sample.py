@@ -15,9 +15,9 @@ from datetime import datetime, timedelta
 #     '135A.T': '2025-04-14'
 # }
 
-
+#決算後に反応があった銘柄選出するプログラム
 # 読み込むCSVファイルのパス
-import_path = r'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvインポート\決算予定_20250606.csv'
+import_path = r'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvインポート\決算発表後の反応\決算予定_20250612.csv'
 
 # 日付部分（例: 20250606）を抽出
 filename = os.path.basename(import_path)
@@ -102,5 +102,5 @@ df_filtered['銘柄コード'] = df_filtered['銘柄コード'].str.replace('.T'
 
 print("\n決算後に5%以上株価が変動した銘柄：")
 print(df_filtered)
-export_path = fr'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvエクスポート\決算反応銘柄_{date_str}.csv'
+export_path = fr'C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvエクスポート\決算発表後反応銘柄\決算反応銘柄_{date_str}.csv'
 df_filtered.to_csv(export_path, index=False, encoding='utf-8-sig')
