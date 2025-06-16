@@ -30,7 +30,7 @@ items = {
 
 # Seleniumドライバ初期化
 options = webdriver.ChromeOptions()
-options.add_argument('--headless')
+# options.add_argument('--headless')
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
 all_results = []

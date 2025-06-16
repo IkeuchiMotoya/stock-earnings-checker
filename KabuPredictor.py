@@ -10,7 +10,7 @@ import io
 
 #通期業績の推移を取得するプログラム
 # 上部に追加：取得したい年数をここで切り替え可能
-NUM_YEARS = 5
+NUM_YEARS = 3
 
 # CSVから銘柄コード＋銘柄名を読み込む
 csv_path = r"C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvインポート\通期業績の推移、指標の取得\検索銘柄.csv"
@@ -20,7 +20,7 @@ code_name_map = dict(zip(ticker_df["銘柄コード"], ticker_df["銘柄名"]))
 
 # ブラウザ設定
 options = webdriver.ChromeOptions()
-options.add_argument('--headless')
+# options.add_argument('--headless')
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 all_data = []
 
