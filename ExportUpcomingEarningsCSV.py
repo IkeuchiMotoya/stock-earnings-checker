@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 
+#決算発表予定銘柄をcsv出力する
 # ========================
 # 🔧 設定
 # ========================
