@@ -8,7 +8,10 @@ import os
 import re
 import io
 
-NUM_YEARS = 2
+#通期業績の推移取得
+
+
+NUM_YEARS = 2 #通期の実績を取得する年数
 csv_path = r"C:\Users\pumpk\OneDrive\デスクトップ\株式\csv\csvインポート\通期業績の推移、指標の取得\検索銘柄.csv"
 ticker_df = pd.read_csv(csv_path, dtype={"銘柄コード": str})
 ticker_list = ticker_df["銘柄コード"].tolist()
@@ -25,7 +28,7 @@ for ticker in ticker_list:
     soup = BeautifulSoup(driver.page_source, "html.parser")
     table = soup.find("table")
     if table is None:
-        print(f"[{ticker}] テーブルが見つかりません")
+        print(f"[{ticker}] テーブルが見つかりません → スキップ")
         continue
 
     df = pd.read_html(io.StringIO(str(table)), header=0)[0]
@@ -59,18 +62,28 @@ for ticker in ticker_list:
     if df_pred.empty and not df_forecast.empty:
         df_pred = extract_next_year(df_forecast)
 
-    # 結合
     df_combined = pd.concat([df_act, df_pred], ignore_index=True)
 
     if df_combined.empty:
         print(f"[{ticker}] データが取得できません → スキップ")
         continue
 
+    # 売上高カラムの名称に柔軟対応
+    sales_col = next((col for col in ["売上高", "営業収益", "売上収益"] if col in df_combined.columns), None)
+    if sales_col:
+        df_combined["売上高"] = pd.to_numeric(
+            df_combined[sales_col].astype(str).str.replace(",", "").str.replace("▲", "-").str.strip(),
+            errors="coerce"
+        )
+    else:
+        df_combined["売上高"] = float("nan")
+
+    # 他の数値変換
     profit_col = next((name for name in ["当期純利益", "当期利益"] if name in df_combined.columns), None)
-    for col in ["売上高", "営業利益", "経常利益"]:
+    for col in ["営業利益", "経常利益"]:
         if col in df_combined.columns:
             df_combined[col] = pd.to_numeric(
-                df_combined[col].astype(str).str.replace(",", "").str.replace("▲", "-").str.replace("*", "").str.replace("＊", "").str.strip(),
+                df_combined[col].astype(str).str.replace(",", "").str.replace("▲", "-").str.strip(),
                 errors="coerce"
             )
         else:
@@ -78,14 +91,20 @@ for ticker in ticker_list:
 
     if profit_col:
         df_combined["当期純利益"] = pd.to_numeric(
-            df_combined[profit_col].astype(str).str.replace(",", "").str.replace("▲", "-").str.replace("*", "").str.replace("＊", "").str.strip(),
+            df_combined[profit_col].astype(str).str.replace(",", "").str.replace("▲", "-").str.strip(),
             errors="coerce"
         )
     else:
         df_combined["当期純利益"] = float("nan")
 
-    for base, ratio in [("売上高", "売上高比率"), ("営業利益", "営業利益比率"), ("経常利益", "経常利益比率"), ("当期純利益", "当期純利益比率")]:
-        df_combined[ratio] = df_combined[base].pct_change().apply(lambda x: f"{x*100:.1f}%" if pd.notna(x) else "")
+    # 比率計算
+    for base, ratio in [("売上高", "売上高比率"), ("営業利益", "営業利益比率"),
+                        ("経常利益", "経常利益比率"), ("当期純利益", "当期純利益比率")]:
+        df_combined[ratio] = ""
+        for i in range(1, len(df_combined)):
+            prev, curr = df_combined.loc[i - 1, base], df_combined.loc[i, base]
+            if pd.notna(prev) and prev != 0 and pd.notna(curr):
+                df_combined.loc[i, ratio] = f"{(curr - prev) / prev * 100:.1f}%"
 
     df_combined["銘柄コード"] = ticker
     df_combined["銘柄名"] = code_name_map.get(ticker, "")
@@ -100,7 +119,7 @@ driver.quit()
 
 if all_data:
     final_df = pd.concat(all_data, ignore_index=True)
-    out = r"C:\Users\pumpk\OneDrive\デスクトップ\株式\分析\通期業績_検索銘柄_予想込み.xlsx"
+    out = r"C:\Users\pumpk\OneDrive\デスクトップ\株式\分析\通期業績_検索銘柄_予想込み_完全版.xlsx"
     final_df.to_excel(out, index=False)
     os.startfile(out)
 else:
